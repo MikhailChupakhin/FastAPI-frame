@@ -5,6 +5,7 @@ import jwt
 from passlib.hash import argon2
 
 from core.config import settings
+from users.schemas import UserSchema
 
 
 def encode_jwt(
@@ -28,7 +29,7 @@ def encode_jwt(
     return encoded
 
 
-def decoded_jwt(
+def decode_jwt(
     token: str | bytes,
     public_key: str = settings.auth_jwt.public_key_path.read_text(),
     algorithm: str = settings.auth_jwt.algorithm,
@@ -51,3 +52,32 @@ def validate_password(password: str, hashed_password: str) -> bool:
         return True
     else:
         return False
+
+
+def create_jwt(
+    token_type: str,
+    token_data: dict,
+    expire_minutes: int = settings.auth_jwt.access_token_expire_minutes,
+) -> str:
+    jwt_payload = {"type": token_type}
+    jwt_payload.update(token_data)
+    return encode_jwt(payload=jwt_payload, expire_minutes=expire_minutes)
+
+
+def create_access_token(user: UserSchema) -> str:
+    jwt_payload = {"sub": user.id}
+    print(123123)
+    return create_jwt(
+        token_type="access",
+        token_data=jwt_payload,
+        expire_minutes=settings.auth_jwt.access_token_expire_minutes,
+    )
+
+
+def create_refresh_token(user: UserSchema) -> str:
+    jwt_payload = {"sub": user.id}
+    return create_jwt(
+        token_type="refresh",
+        token_data=jwt_payload,
+        expire_minutes=settings.auth_jwt.refresh_token_expire_minutes,
+    )

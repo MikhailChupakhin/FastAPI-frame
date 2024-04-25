@@ -1,11 +1,12 @@
 # C:\Users\user1\PycharmProjects\FastAPi-actual\users\crud.py
-from fastapi import Form
+
+from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from auth.validations import get_current_auth_user
 from auth.utils import hash_password, validate_password
 from models.user import User
-from users.schemas import UserCreate
+from users.schemas import UserCreate, UserSchema
 
 
 async def create_user(user_data: UserCreate, session: AsyncSession):
@@ -30,3 +31,9 @@ async def validate_auth_user(
     if not user or not validate_password(password, user.hashed_password):
         return None
     return user
+
+
+def get_current_active_auth_user(user: UserSchema = Depends(get_current_auth_user)):
+    if user.is_active:
+        return user
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user inactive")
