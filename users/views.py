@@ -1,13 +1,33 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Form
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.user import User
+from users.crud import validate_auth_user
 from users.schemas import UserCreate
 from core.database import get_async_session
 from users import crud
+from auth.utils import encode_jwt
 
 router = APIRouter(prefix="/users")
+
+
+@router.post("/login")
+async def login_user(
+    username: str = Form(..., description="Enter your username"),
+    password: str = Form(..., description="Enter your password"),
+    session: AsyncSession = Depends(get_async_session),
+):
+    user = await validate_auth_user(
+        session=session,
+        username=username,
+        password=password,
+    )
+    if not user:
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+    jwt_payload = {"sub": user.username}
+    token = encode_jwt(jwt_payload)
+    return {"access_token": token, "token_type": "Bearer"}
 
 
 @router.post("/register")
